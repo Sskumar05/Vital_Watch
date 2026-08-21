@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VitalWatch — Smart Patient Monitor</title>
+  <meta name="description" content="AI-driven IoT remote patient monitoring dashboard with live ECG, HR & SpO2 gauges, trend charts and real-time alerts." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ╔══ CRITICAL ALERT BANNER ══════════════════════════════╗ -->
+  <div id="alert-banner" class="alert-banner hidden" role="alert" aria-live="assertive">
+    <div class="alert-pulse-ring r1"></div>
+    <div class="alert-pulse-ring r2"></div>
+    <div class="alert-inner">
+      <span class="alert-siren">🚨</span>
+      <div class="alert-text">
+        <strong>CRITICAL VITALS ALERT</strong>
+        <span id="alert-detail">Abnormal reading detected</span>
+      </div>
+      <span id="alert-time" class="alert-time"></span>
+      <button class="alert-dismiss" onclick="hideAlertBanner()" aria-label="Dismiss">✕</button>
+    </div>
+  </div>
+
+  <!-- ╔══ HEADER ═════════════════════════════════════════════╗ -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <div class="logo-heart-wrap">
+          <span id="logo-heart" class="logo-heart">♥</span>
+          <div class="logo-ripple"></div>
+        </div>
+        <div>
+          <div class="logo-name">VitalWatch</div>
+          <div class="logo-sub">Remote Patient Monitor</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="patient-chip">
+        <div class="patient-avatar">M</div>
+        <div>
+          <div class="patient-name">MADHUSRI</div>
+          <div class="patient-meta">ID: PM-2024-001 · Ward 3B</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div id="datetime" class="datetime"></div>
+      <div id="conn-status" class="conn-pill offline">
+        <span class="conn-dot"></span>
+        <span id="conn-label">Connecting…</span>
+      </div>
+      <button id="dark-toggle" class="icon-btn" onclick="toggleDarkMode()" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+    </div>
+  </header>
+
+  <!-- ╔══ MAIN ════════════════════════════════════════════════╗ -->
+  <main class="main">
+
+    <!-- ── ROW 1: Gauges + ECG ─────────────────────────────── -->
+    <div class="top-grid">
+
+      <!-- Heart Rate Gauge -->
+      <div id="card-hr" class="gauge-card" aria-label="Heart Rate">
+        <div class="card-top-row">
+          <div class="card-icon-badge hr-icon">
+            <span id="logo-heart-card" class="beat-heart">♥</span>
+          </div>
+          <div>
+            <div class="card-title">Heart Rate</div>
+            <div class="card-subtitle">beats per minute</div>
+          </div>
+          <div id="hr-badge" class="status-pill pill-wait" style="margin-left:auto">WAITING</div>
+        </div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" viewBox="0 0 160 160" aria-hidden="true">
+            <defs>
+              <linearGradient id="hr-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fb923c"/>
+                <stop offset="100%" stop-color="#dc2626"/>
+              </linearGradient>
+              <filter id="glow-hr">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <!-- Track -->
+            <circle class="g-track" cx="80" cy="80" r="64"/>
+            <!-- Segment markers -->
+            <circle class="g-marker" cx="80" cy="80" r="64" stroke-dasharray="4 16.8" transform="rotate(-90 80 80)"/>
+            <!-- Progress arc -->
+            <circle id="hr-arc" class="g-arc" cx="80" cy="80" r="64"
+              stroke="url(#hr-grad)" stroke-dasharray="402.1" stroke-dashoffset="402.1"
+              filter="url(#glow-hr)" transform="rotate(-90 80 80)" stroke-linecap="round"/>
+          </svg>
+          <div class="gauge-center">
+            <div id="hr-num" class="gauge-num">--</div>
+            <div class="gauge-unit">bpm</div>
+          </div>
+        </div>
+        <div class="gauge-range-row">
+          <span class="gauge-range-lbl" style="color:var(--clr-success)">50 normal</span>
+          <span class="gauge-range-lbl" style="color:var(--clr-danger)">100+ alert</span>
+        </div>
+      </div>
+
+      <!-- SpO2 Gauge -->
+      <div id="card-spo2" class="gauge-card" aria-label="Blood Oxygen">
+        <div class="card-top-row">
+          <div class="card-icon-badge spo2-icon">🫁</div>
+          <div>
+            <div class="card-title">Blood Oxygen</div>
+            <div class="card-subtitle">SpO2 saturation</div>
+          </div>
+          <div id="spo2-badge" class="status-pill pill-wait" style="margin-left:auto">WAITING</div>
+        </div>
+        <div class="gauge-wrap" style="position:relative">
+          <div id="breathing-ring" class="breathing-ring"></div>
+          <svg class="gauge-svg" viewBox="0 0 160 160" aria-hidden="true">
+            <defs>
+              <linearGradient id="spo2-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#06b6d4"/>
+                <stop offset="100%" stop-color="#2563eb"/>
+              </linearGradient>
+              <filter id="glow-spo2">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <circle class="g-track" cx="80" cy="80" r="64"/>
+            <circle class="g-marker" cx="80" cy="80" r="64" stroke-dasharray="4 16.8" transform="rotate(-90 80 80)"/>
+            <circle id="spo2-arc" class="g-arc" cx="80" cy="80" r="64"
+              stroke="url(#spo2-grad)" stroke-dasharray="402.1" stroke-dashoffset="402.1"
+              filter="url(#glow-spo2)" transform="rotate(-90 80 80)" stroke-linecap="round"/>
+          </svg>
+          <div class="gauge-center">
+            <div id="spo2-num" class="gauge-num">--</div>
+            <div class="gauge-unit">%</div>
+          </div>
+        </div>
+        <div class="gauge-range-row">
+          <span class="gauge-range-lbl" style="color:var(--clr-danger)">&#60;92% alert</span>
+          <span class="gauge-range-lbl" style="color:var(--clr-success)">≥92% normal</span>
+        </div>
+      </div>
+
+      <!-- Live ECG Waveform -->
+      <div class="ecg-card" aria-label="Live ECG Waveform">
+        <div class="card-top-row">
+          <div class="card-icon-badge ecg-icon">⚡</div>
+          <div>
+            <div class="card-title">Live ECG Waveform</div>
+            <div class="card-subtitle">PQRST complex · real-time</div>
+          </div>
+          <span id="ecg-bpm" class="ecg-bpm-chip">-- bpm</span>
+        </div>
+        <canvas id="ecg-canvas" class="ecg-canvas" aria-label="Scrolling ECG waveform"></canvas>
+        <div class="ecg-legend-row">
+          <span class="ecg-wave-tag">P</span>
+          <span class="ecg-wave-tag">Q</span>
+          <span class="ecg-wave-tag ecg-r">R</span>
+          <span class="ecg-wave-tag">S</span>
+          <span class="ecg-wave-tag">T</span>
+          <span class="ecg-speed-tag">25 mm/s</span>
+        </div>
+      </div>
+
+    </div><!-- /top-grid -->
+
+    <!-- ── ROW 2: Session Stats ────────────────────────────── -->
+    <div class="stats-bar" role="region" aria-label="Session Statistics">
+      <div class="stat-chip">
+        <div class="stat-icon-ring" style="--sc:#ef4444">↓</div>
+        <div class="stat-body"><span id="stat-hr-min" class="stat-val">--</span><span class="stat-lbl">Min HR</span></div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-icon-ring" style="--sc:#ef4444">↑</div>
+        <div class="stat-body"><span id="stat-hr-max" class="stat-val">--</span><span class="stat-lbl">Max HR</span></div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-icon-ring" style="--sc:#f97316">~</div>
+        <div class="stat-body"><span id="stat-hr-avg" class="stat-val">--</span><span class="stat-lbl">Avg HR</span></div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-icon-ring" style="--sc:#3b82f6">↓</div>
+        <div class="stat-body"><span id="stat-spo2-min" class="stat-val">--</span><span class="stat-lbl">Min SpO2</span></div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-icon-ring" style="--sc:#06b6d4">~</div>
+        <div class="stat-body"><span id="stat-spo2-avg" class="stat-val">--</span><span class="stat-lbl">Avg SpO2</span></div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-icon-ring" style="--sc:#f59e0b">🔔</div>
+        <div class="stat-body"><span id="stat-alerts" class="stat-val">0</span><span class="stat-lbl">Alerts</span></div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-icon-ring" style="--sc:#8b5cf6">#</div>
+        <div class="stat-body"><span id="stat-readings" class="stat-val">0</span><span class="stat-lbl">Readings</span></div>
+      </div>
+    </div>
+
+    <!-- ── ROW 3: Trend Chart ──────────────────────────────── -->
+    <section class="chart-card">
+      <div class="section-header">
+        <h2 class="section-title">📈 Vitals Trend</h2>
+        <div class="range-toggle">
+          <button id="btn-1h"  class="range-btn active" onclick="setRange('1h')">1 Hour</button>
+          <button id="btn-24h" class="range-btn"        onclick="setRange('24h')">24 Hours</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="vitalsChart" aria-label="Trend chart of heart rate and SpO2"></canvas>
+        <div id="chart-empty" class="chart-empty hidden">📡 Waiting for sensor data…</div>
+      </div>
+    </section>
+
+    <!-- ── ROW 4: Feed + Alert Table ──────────────────────── -->
+    <div class="bottom-grid">
+
+      <!-- Live Status Feed -->
+      <section class="feed-card">
+        <div class="section-header">
+          <h2 class="section-title">📋 Live Status Feed</h2>
+          <span id="feed-count" class="feed-count-badge">0 events</span>
+        </div>
+        <div id="status-feed" class="status-feed">
+          <div class="feed-placeholder">Waiting for first reading…</div>
+        </div>
+      </section>
+
+      <!-- Alert History -->
+      <section class="alerts-card">
+        <div class="section-header">
+          <h2 class="section-title">⚠ Alert History</h2>
+          <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+        </div>
+        <div class="table-scroll">
+          <table class="alerts-table">
+            <thead>
+              <tr><th>Timestamp</th><th>HR</th><th>SpO2</th><th>Status</th></tr>
+            </thead>
+            <tbody id="alerts-body">
+              <tr class="empty-row"><td colspan="4">No critical events recorded yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ╔══ FOOTER ══════════════════════════════════════════════╗ -->
+  <footer class="footer">
+    <span>🏥 AI-Driven IoT Smart Remote Patient Monitoring System</span>
+    <span>Last updated: <strong id="last-updated">—</strong></span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
