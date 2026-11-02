@@ -1,0 +1,15 @@
+{
+  "name": "patient-monitor-database-migration",
+  "version": "1.0.0",
+  "description": "Migration utility to transfer SQLite vitals.db to MongoDB",
+  "main": "migrateSQLiteToMongoDB.js",
+  "scripts": {
+    "migrate": "node migrateSQLiteToMongoDB.js",
+    "verify": "node verifyMigration.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mongoose": "^8.7.0"
+  }
+}
+
